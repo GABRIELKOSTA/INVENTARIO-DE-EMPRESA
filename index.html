@@ -118,22 +118,30 @@
       const jsPDF = window.jspdf.jsPDF;
       const doc = new jsPDF();
       const lista = carregarLS();
+      doc.setFontSize(12);
       doc.text('Inventário da Empresa', 10, 10);
       let y = 20;
+
       lista.forEach((item, i) => {
-        doc.text(`${i + 1}. ${item.nome} - ${item.quantidade} un`, 10, y);
+        const titulo = `${i + 1}. ${item.nome} - ${item.quantidade} un`;
+        doc.text(titulo, 10, y);
         y += 6;
+
         if (item.descricao) {
-          doc.text(`   ${item.descricao}`, 10, y);
-          y += 6;
+          const descricaoLines = doc.splitTextToSize(item.descricao, 180);
+          doc.text(descricaoLines, 10, y);
+          y += descricaoLines.length * 6;
         }
-        doc.text('---------------------------', 10, y);
+
+        doc.text('-----------------------------------', 10, y);
         y += 10;
+
         if (y > 270) {
           doc.addPage();
           y = 10;
         }
       });
+
       doc.save('inventario.pdf');
     }
 
