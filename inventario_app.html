@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventário da Empresa</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; padding: 1rem; margin: 0; }
+    h1 { text-align: center; }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; margin-bottom: 0.3rem; }
+    input, textarea, button, select {
+      width: 100%; padding: 0.5rem; margin-top: 0.2rem;
+      border: 1px solid #ccc; border-radius: 5px;
+    }
+    .item-list { margin-top: 2rem; }
+    .item { border-bottom: 1px solid #ddd; padding: 1rem 0; }
+    .btn-danger { background-color: #d9534f; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; }
+    .btn-primary { background-color: #0275d8; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; }
+    .btn-export { margin-top: 2rem; }
+    .actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Inventário da Empresa</h1>
+  <div>
+    <div class="form-group">
+      <label for="item">Item</label>
+      <input type="text" id="item" placeholder="Nome do material">
+    </div>
+    <div class="form-group">
+      <label for="quantidade">Quantidade</label>
+      <input type="number" id="quantidade" min="1">
+    </div>
+    <div class="form-group">
+      <label for="descricao">Descrição</label>
+      <textarea id="descricao" rows="3" placeholder="Observações ou localização..."></textarea>
+    </div>
+    <button onclick="adicionarItem()" class="btn-primary" id="btn-salvar">Adicionar</button>
+  </div>
+
+  <div class="item-list" id="lista"></div>
+  <button onclick="exportarPDF()" class="btn-primary btn-export">Exportar PDF</button>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    const listaEl = document.getElementById('lista');
+    let editIndex = -1;
+
+    function salvarLS(data) {
+      localStorage.setItem('inventario', JSON.stringify(data));
+    }
+
+    function carregarLS() {
+      return JSON.parse(localStorage.getItem('inventario') || '[]');
+    }
+
+    function renderizarLista() {
+      listaEl.innerHTML = '';
+      const itens = carregarLS();
+      itens.forEach((item, i) => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `
+          <strong>${item.nome}</strong> - ${item.quantidade} unidades<br>
+          <em>${item.descricao}</em>
+          <div class="actions">
+            <button class='btn-primary' onclick='editarItem(${i})'>Editar</button>
+            <button class='btn-danger' onclick='removerItem(${i})'>Remover</button>
+          </div>
+        `;
+        listaEl.appendChild(div);
+      });
+    }
+
+    function adicionarItem() {
+      const nome = document.getElementById('item').value.trim();
+      const quantidade = parseInt(document.getElementById('quantidade').value);
+      const descricao = document.getElementById('descricao').value.trim();
+      if (!nome || !quantidade) return alert("Preencha os campos obrigatórios");
+      const lista = carregarLS();
+      const novoItem = { nome, quantidade, descricao };
+
+      if (editIndex > -1) {
+        lista[editIndex] = novoItem;
+        editIndex = -1;
+        document.getElementById('btn-salvar').textContent = 'Adicionar';
+      } else {
+        lista.push(novoItem);
+      }
+
+      salvarLS(lista);
+      renderizarLista();
+      document.getElementById('item').value = '';
+      document.getElementById('quantidade').value = '';
+      document.getElementById('descricao').value = '';
+    }
+
+    function editarItem(index) {
+      const lista = carregarLS();
+      const item = lista[index];
+      document.getElementById('item').value = item.nome;
+      document.getElementById('quantidade').value = item.quantidade;
+      document.getElementById('descricao').value = item.descricao;
+      editIndex = index;
+      document.getElementById('btn-salvar').textContent = 'Salvar';
+    }
+
+    function removerItem(index) {
+      const lista = carregarLS();
+      lista.splice(index, 1);
+      salvarLS(lista);
+      renderizarLista();
+    }
+
+    function exportarPDF() {
+      const jsPDF = window.jspdf.jsPDF;
+      const doc = new jsPDF();
+      const lista = carregarLS();
+      doc.text('Inventário da Empresa', 10, 10);
+      let y = 20;
+      lista.forEach((item, i) => {
+        doc.text(`${i + 1}. ${item.nome} - ${item.quantidade} un`, 10, y);
+        y += 6;
+        if (item.descricao) {
+          doc.text(`   ${item.descricao}`, 10, y);
+          y += 6;
+        }
+        doc.text('---------------------------', 10, y);
+        y += 10;
+        if (y > 270) {
+          doc.addPage();
+          y = 10;
+        }
+      });
+      doc.save('inventario.pdf');
+    }
+
+    renderizarLista();
+  </script>
+</body>
+</html>
